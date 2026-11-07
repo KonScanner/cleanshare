@@ -110,7 +110,7 @@ to extend.
 
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode**.
-3. Click **Load unpacked** and choose this `shareclean/` folder.
+3. Click **Load unpacked** and choose the folder that contains `manifest.json`.
 4. Pin CleanShare to the toolbar.
 
 ### Browser support
