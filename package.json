@@ -1,0 +1,13 @@
+{
+  "name": "cleanshare",
+  "version": "1.0.2",
+  "private": true,
+  "description": "Chrome extension that strips account-bound share tags from YouTube, X, Facebook and Instagram links.",
+  "scripts": {
+    "test": "node --test test/cleaner.test.js",
+    "test:e2e": "node test/e2e.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

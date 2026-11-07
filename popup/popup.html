@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en" class="no-transition">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CleanShare</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <img class="logo" src="../icons/icon128.png" alt="" width="36" height="36" />
+      <div>
+        <h1>CleanShare</h1>
+        <p>Share the link, not the tracking tag.</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <div class="row gap">
+          <div>
+            <h2>Automatic cleaning</h2>
+            <p class="hint" id="enabled-hint">
+              On. Links are cleaned when you copy or share them.
+            </p>
+          </div>
+          <label class="switch">
+            <input
+              type="checkbox"
+              id="enabled"
+              aria-label="Enable automatic cleaning"
+              aria-describedby="enabled-hint"
+            />
+            <span class="slider" aria-hidden="true"></span>
+          </label>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Clean a link</h2>
+        <p class="hint">Paste a share link from anywhere.</p>
+
+        <input
+          id="input"
+          type="text"
+          inputmode="url"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="https://youtu.be/…?si=…"
+          aria-label="Link to clean"
+        />
+
+        <button id="clean" class="primary" type="button">Clean link</button>
+
+        <div id="result-wrap" class="result" hidden>
+          <label for="result">Cleaned link</label>
+          <div class="copy-row">
+            <input id="result" type="text" readonly spellcheck="false" />
+            <button id="copy" class="secondary" type="button" disabled>
+              Copy
+            </button>
+          </div>
+          <p id="status" class="status" role="status"></p>
+        </div>
+      </section>
+
+      <details class="card reference">
+        <summary>
+          <span>What gets removed</span>
+          <span class="chevron" aria-hidden="true">⌄</span>
+        </summary>
+
+        <div class="details-body">
+          <div class="platform">
+            <span class="platform-name">YouTube</span>
+            <span class="chips">
+              <code>si</code><code>is</code><code>pp</code><code>feature</code>
+            </span>
+          </div>
+
+          <div class="platform">
+            <span class="platform-name">X / Twitter</span>
+            <span class="chips">
+              <code>a</code><code>s</code><code>t</code><code>cn</code>
+              <code>ref_src</code><code>ref_url</code>
+            </span>
+          </div>
+
+          <div class="platform">
+            <span class="platform-name">Facebook</span>
+            <span class="chips">
+              <code>fbclid</code><code>mibextid</code><code>rdid</code>
+              <code>sfnsn</code><code>__cft__</code>
+            </span>
+          </div>
+
+          <div class="platform">
+            <span class="platform-name">Instagram</span>
+            <span class="chips">
+              <code>igsh</code><code>igshid</code><code>igsi</code>
+            </span>
+          </div>
+
+          <div class="platform">
+            <span class="platform-name">Campaign</span>
+            <span class="chips">
+              <code>utm_*</code><code>mtm_*</code>
+            </span>
+          </div>
+
+          <p class="hint keep">
+            Keeps YouTube <code>t</code>/<code>start</code>/<code>list</code>/<code>index</code>
+            and Instagram <code>img_index</code>. Campaign tags follow the toggle
+            below.
+          </p>
+        </div>
+      </details>
+
+      <section class="card compact">
+        <label class="row check-row" for="utm">
+          <input type="checkbox" id="utm" />
+          <span>
+            <strong>Also strip campaign tags</strong>
+            <span class="hint">
+              Removes <code>utm_*</code> and <code>mtm_*</code>. This can drop
+              creator attribution.
+            </span>
+          </span>
+        </label>
+      </section>
+    </main>
+
+    <footer>No network. No analytics. Everything runs locally.</footer>
+
+    <script src="../src/cleaner.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
