@@ -117,14 +117,16 @@ to extend.
 
 ### Firefox
 
-1. Open `about:debugging#/runtime/this-firefox`.
-2. Click **Load Temporary Add-on**.
-3. Choose `manifest.firefox.json`, or `dist/firefox/manifest.json` after a
-   build.
+1. Run `npm run build:firefox` (Node 22+). This writes the loadable extension
+   to `dist/firefox/` with the Firefox manifest in place as `manifest.json`.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Click **Load Temporary Add-on** and choose `dist/firefox/manifest.json`.
 4. Pin CleanShare from the extensions menu.
 
-A temporary add-on lasts until Firefox closes. For a permanent install, sign
-the package through addons.mozilla.org; see [PUBLISHING.md](PUBLISHING.md).
+Firefox needs a `manifest.json` at the folder root, so load the built folder
+rather than `manifest.firefox.json`. A temporary add-on lasts until Firefox
+closes. For a permanent install, sign the package through addons.mozilla.org;
+see [PUBLISHING.md](PUBLISHING.md).
 
 Then open a post on X, YouTube, Facebook or Instagram, use **Share → Copy
 link**, and paste. The tags should be gone.
