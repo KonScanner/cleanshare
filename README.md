@@ -1,7 +1,7 @@
 # CleanShare
 
-A small Chrome extension that removes the tracking tail social platforms add
-when you press **Share** or **Copy link**.
+A small Chrome and Firefox extension that removes the tracking tail social
+platforms add when you press **Share** or **Copy link**.
 
 ![CleanShare popup](docs/popup.png)
 
@@ -108,15 +108,33 @@ to extend.
 
 ## Install
 
+### Chrome
+
 1. Open `chrome://extensions`.
 2. Turn on **Developer mode**.
 3. Click **Load unpacked** and choose the folder that contains `manifest.json`.
 4. Pin CleanShare to the toolbar.
 
+### Firefox
+
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on**.
+3. Choose `manifest.firefox.json`, or `dist/firefox/manifest.json` after a
+   build.
+4. Pin CleanShare from the extensions menu.
+
+A temporary add-on lasts until Firefox closes. For a permanent install, sign
+the package through addons.mozilla.org; see [PUBLISHING.md](PUBLISHING.md).
+
+Then open a post on X, YouTube, Facebook or Instagram, use **Share → Copy
+link**, and paste. The tags should be gone.
+
 ### Browser support
 
-CleanShare needs **Chrome 95 or newer**. It uses Manifest V3 and
-[`chrome.scripting`](https://developer.chrome.com/docs/extensions/reference/api/scripting).
+CleanShare needs **Chrome 95+** or **Firefox 140+**. Both builds use Manifest
+V3 and make no network requests.
+
+**Chrome**
 
 - **Chrome 102+:** the service worker registers the page-world cleaner with
   `world: "MAIN"` and `runAt: "document_start"`, so wrapping starts before the
@@ -128,25 +146,44 @@ CleanShare needs **Chrome 95 or newer**. It uses Manifest V3 and
 
 The manifest-only alternative (`"world": "MAIN"` in `content_scripts`,
 [Chrome 111+](https://developer.chrome.com/docs/extensions/reference/manifest/content-scripts))
-would exclude older browsers, so the extension does not use it. Check your
+would exclude older browsers, so the Chrome build does not use it. Check your
 version at `chrome://version`.
 
-Tested on Chrome 136.
+**Firefox**
 
-Then open a post on X, YouTube, Facebook or Instagram, use **Share → Copy
-link**, and paste. The tags should be gone.
+- **Firefox 140+:** Firefox 128 added `"world": "MAIN"` for content scripts
+  declared in the manifest, and Firefox 140 added the
+  `data_collection_permissions` declaration that AMO requires. The Firefox
+  manifest declares the page-world cleaner itself, so Firefox injects it at
+  document-start, before the site's scripts.
+- **Firefox 109–139:** Manifest V3 works, but 109–127 cannot run code in the
+  page's MAIN world and 128–139 lack the AMO data declaration. These versions
+  are not supported. Firefox 140 ESR and newer are.
+- Firefox runs the background script as an event page, not a service worker.
+  The page-world script is declared in the manifest, so the background script
+  never has to inject it.
+
+Tested on Chrome 136 and Firefox 159 (desktop). The Firefox manifest declares
+Firefox for Android 142+ compatible because that is the first Android release
+with the same data-collection declaration; Android is not tested.
 
 ## How it works
 
-The extension has a small service worker and makes no network requests.
+The extension has a small background script and makes no network requests.
 
-- `src/bridge.js` runs in Chrome's isolated world on the four supported sites,
+- `src/bridge.js` runs in the isolated world on the four supported sites,
   reads the toggle settings from `chrome.storage.sync`, and publishes them to
-  the page as a `data-cleanshare` attribute.
-- The bridge asks `background/service-worker.js` to inject `src/cleaner.js` and
-  `src/main.js` into the page's MAIN world. On Chrome 102+ the worker also
-  registers a document-start `world: "MAIN"` content script; the message path
-  is the fallback for the current tab and for Chrome 95–101.
+  the page as a `data-cleanshare` attribute. Firefox exposes the same
+  `storage.sync` API under `browser.storage`, and the `chrome` callback form
+  works there too.
+- **Chrome:** the bridge asks `background/service-worker.js` to inject
+  `src/cleaner.js` and `src/main.js` into the page's MAIN world. On Chrome 102+
+  the worker also registers a document-start `world: "MAIN"` content script;
+  the message path is the fallback for the current tab and for Chrome 95–101.
+- **Firefox:** `manifest.firefox.json` lists `src/cleaner.js` and
+  `src/main.js` as a document-start `world: "MAIN"` content script, so Firefox
+  injects them before the page scripts. The background script detects Firefox
+  and does not inject a second copy.
 - `src/main.js` wraps the APIs the share buttons actually use:
   - `navigator.clipboard.writeText` (the usual **Copy link** path)
   - `navigator.clipboard.write` (widgets that build a `ClipboardItem`)
@@ -181,45 +218,74 @@ cleaned and the surrounding text is preserved.
 ## Privacy
 
 - No network requests, analytics, telemetry, or remote code.
-- Settings live in `chrome.storage.sync`, which Chrome syncs through your own
-  account.
+- Settings live in `storage.sync`. Chrome syncs them through the browser
+  profile's Google account; Firefox syncs them through Firefox Sync when Sync
+  is enabled. They are also kept locally.
 - The extension writes to the clipboard; it never reads it in the background.
   The `clipboardWrite` permission exists only for the popup's **Copy** button.
 - Site access is limited to `youtube.com`, `youtu.be`, `x.com`, `twitter.com`,
   `facebook.com` and `instagram.com`.
-- The `scripting` permission lets the service worker inject the page-world
-  script into the tab whose own content script asked for it. It does not give
-  the extension access to other sites.
+- The `scripting` permission (Chrome only) lets the service worker inject the
+  page-world script into the tab whose own content script asked for it. It does
+  not give the extension access to other sites. The Firefox build does not
+  request it.
 
 See [PRIVACY.md](PRIVACY.md) for the short version.
 
 ## Development
 
 ```bash
-npm test          # unit tests for the URL rules (Node 20+)
-node test/e2e.mjs # loads the extension in Chrome (Node 22+)
+npm test                     # URL rules + manifest parity (Node 22+)
+npm run test:e2e             # loads the extension in Chrome
+npm run test:e2e:firefox     # loads the extension in Firefox
+npm run build:chrome         # clean Chrome Web Store ZIP
+npm run build:firefox        # clean AMO ZIP + unpacked copy
 python3 icons/make-icons.py  # regenerate the PNG icons
 ```
 
-The end-to-end test needs Node 22+, Chrome and OpenSSL. It serves a fake
-`x.com` over HTTPS with a self-signed certificate, loads the unpacked
-extension, and verifies clipboard text, hyperlink HTML, `ClipboardItem`
-writes, `navigator.share`, popup cleaning and popup size. It was verified on
-Chrome 136, including the document-start registration path used by Chrome
-102+.
+The Chrome test needs Node 22+, Chrome and OpenSSL. It serves a fake `x.com`
+over HTTPS with a self-signed certificate, loads the unpacked extension, and
+verifies clipboard text, hyperlink HTML, `ClipboardItem` writes,
+`navigator.share`, popup cleaning and popup size. It was verified on Chrome
+136, including the document-start registration path used by Chrome 102+.
+
+The Firefox test needs Node 22+, Firefox 140+, `geckodriver` and `zip`. It
+builds a temporary XPI, installs it as a temporary add-on through WebDriver,
+maps `x.com` to a local test server, and verifies that the MAIN-world script
+runs before the page's scripts, that the clipboard wrapper receives a cleaned
+URL, that the settings bridge publishes defaults, and that a YouTube
+timestamp survives. It was verified on Firefox 159. Point the test at the
+browsers with:
+
+```bash
+GECKODRIVER=/path/to/geckodriver FIREFOX_BIN=/path/to/firefox \
+  npm run test:e2e:firefox
+```
+
+If `geckodriver` or Firefox is not installed, that command prints `SKIP` and
+exits 0. Firefox's WebDriver refuses to script privileged `moz-extension://`
+pages, so the Firefox test covers the content-script side. The popup is
+exercised by the Chrome test and is the same HTML, CSS and JavaScript in both
+builds.
+
+`npm test` also runs `scripts/check-manifests.mjs`, which fails if the two
+manifests drift in name, version, permissions, matches or icons.
 
 ### Layout
 
 ```
-manifest.json                 MV3 manifest
-background/service-worker.js  MAIN-world registration and injector
+manifest.json                 Chrome MV3 manifest
+manifest.firefox.json         Firefox MV3 manifest (MAIN-world script)
+background/service-worker.js  Chrome injector / Firefox event page
 src/cleaner.js                URL rules and cleanUrl/cleanText
 src/bridge.js                 settings bridge + inject request
 src/main.js                   clipboard/share/copy wrappers
 popup/                        toolbar UI and paste cleaner
 icons/                        PNG icons and their generator
-scripts/build-store.sh        clean store ZIP builder
-test/                         unit and end-to-end tests
+scripts/build-store.sh        clean Chrome Web Store ZIP builder
+scripts/build-firefox.sh      clean AMO ZIP + unpacked builder
+scripts/check-manifests.mjs   manifest parity and release guard
+test/                         unit, Chrome and Firefox end-to-end tests
 PUBLISHING.md                 release checklist
 ```
 

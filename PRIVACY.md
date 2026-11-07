@@ -5,13 +5,14 @@ share any data.
 
 ## What it stores
 
-Only two settings, in `chrome.storage.sync`:
+Only two settings, in the browser's `storage.sync` area:
 
 - whether automatic cleaning is enabled
 - whether campaign tags (`utm_*`, `mtm_*`) are stripped
 
-Chrome may sync those settings through your own browser account. There is no
-CleanShare account and no CleanShare server.
+Chrome may sync those settings through the profile's Google account. Firefox
+may sync them through Firefox Sync when Sync is enabled; otherwise they stay
+on the device. There is no CleanShare account and no CleanShare server.
 
 ## What it reads
 
@@ -35,9 +36,11 @@ popup. The `clipboardWrite` permission exists for that popup button.
 There are no network requests, analytics, telemetry, tracking pixels, or
 remote code.
 
-A small service worker receives a message from the page's content script and
-injects the page-world cleaner into that tab with `chrome.scripting`. It does
-not read page content, collect data, or contact a server.
+In Chrome, a small service worker receives a message from the page's content
+script and injects the page-world cleaner into that tab with
+`chrome.scripting`. In Firefox, the manifest declares that page-world script,
+so the background event page does no injection. Neither background script
+reads page content, collects data, or contacts a server.
 
 ## Permissions
 
@@ -45,7 +48,7 @@ not read page content, collect data, or contact a server.
 | --- | --- |
 | `storage` | Save the two toggles. |
 | `clipboardWrite` | Let the popup's **Copy** button write the cleaned link. |
-| `scripting` | Inject the page-world cleaner into the supported tab that asked for it. |
+| `scripting` (Chrome only) | Inject the page-world cleaner into the supported tab that asked for it. |
 | Site access (content scripts + host permissions) | Wrap the copy/share APIs on the four supported platforms. |
 
 There is no `tabs`, `webNavigation`, `webRequest`, or "read all sites" access.

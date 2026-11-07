@@ -1,11 +1,25 @@
 /*
  * Injects the page-world patcher into supported tabs.
  *
- * The isolated-world bridge asks this service worker to inject the page-world
- * patcher with chrome.scripting. Its `world: "MAIN"` option has been available
- * since Chrome 95, so this one path works on Chrome 95 and newer.
+ * In Chrome, the isolated-world bridge asks this service worker to inject the
+ * page-world patcher with chrome.scripting. Its `world: "MAIN"` option has been
+ * available since Chrome 95, so this one path works on Chrome 95 and newer.
+ *
+ * Firefox runs this file as an event page. The Firefox manifest declares the
+ * MAIN-world content script itself (Firefox 128+), so this file does no
+ * injection there.
  */
 "use strict";
+
+/*
+ * Firefox exposes the promise-based `browser` namespace. Chrome does not.
+ * `runtime.getBrowserInfo` is Firefox-only, which keeps the check honest if
+ * another Chromium browser ever adds a `browser` alias.
+ */
+const IS_FIREFOX =
+  typeof browser !== "undefined" &&
+  Boolean(browser.runtime) &&
+  typeof browser.runtime.getBrowserInfo === "function";
 
 const SCRIPT_ID = "cleanshare-page-world";
 const MATCHES = [
@@ -29,6 +43,7 @@ function chromeMajor() {
  */
 async function ensureRegistered() {
   if (
+    IS_FIREFOX ||
     chromeMajor() < 102 ||
     !chrome.scripting ||
     typeof chrome.scripting.registerContentScripts !== "function"
@@ -69,6 +84,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sender.tab.id == null
   ) {
     return undefined;
+  }
+
+  /*
+   * Firefox already injected the page-world patcher from the manifest before
+   * this message can arrive. Reply so the bridge stops retrying.
+   */
+  if (IS_FIREFOX) {
+    sendResponse({ ok: true, skipped: "manifest" });
+    return false;
   }
 
   try {

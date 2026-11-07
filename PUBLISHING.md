@@ -1,31 +1,36 @@
 # Publishing CleanShare
 
-This is the checklist for taking the local extension to a public Chrome Web
-Store listing. The code is ready; the account, payment and store submission
-need the publisher's Google account.
+This is the checklist for taking the local extension to public Chrome Web
+Store and Firefox Add-ons (AMO) listings. The code is ready; the accounts,
+payment and store submissions need the publisher's own accounts.
 
 ## 1. Pick a name first
 
 **Do not publish as "CleanShare".** A similar extension called
 [CleanShare — Link Cleaner](https://www.crxsoso.com/firefox/detail/cleanshare-link-cleaner)
-already exists. Reusing the name invites confusion and review problems.
+already exists on both Chrome and Firefox. Reusing the name invites confusion
+and review problems on both stores.
 
 Suggested working name: **ShareTail** (the tracking tail of a share link).
 Other options: ShareTag Cleaner, TagTail, CleanLink Share.
 
 Before publishing, update the name consistently in:
 
-- `manifest.json` (`name`, `short_name`)
+- `manifest.json` and `manifest.firefox.json` (`name`, `short_name`)
 - `popup/popup.html` (`<title>`, `<h1>`)
 - `README.md`
 - this file, if desired
 
+`scripts/check-manifests.mjs` fails the build if the two manifests use
+different names.
+
 Do not put YouTube, X, Facebook or Instagram in the extension name. Mentioning
 them in the description is fine, but add "not affiliated with" language.
 
-## 2. Create the developer account
+## 2. Create the developer accounts
 
-Only the publisher can do this:
+Only the publisher can do this. Firefox needs a free Mozilla account and has
+no registration fee; see section 8. For Chrome:
 
 1. Sign in to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
    with the Google account that should own the extension long-term.
@@ -42,15 +47,23 @@ Official references:
 [publish](https://developer.chrome.com/docs/webstore/publish),
 [images](https://developer.chrome.com/docs/webstore/images).
 
-## 3. Build the upload package
+## 3. Build the upload packages
 
 ```bash
-./scripts/build-store.sh
+./scripts/build-store.sh    # Chrome Web Store
+./scripts/build-firefox.sh  # Firefox Add-ons (AMO)
 ```
 
-This writes `dist/<name>-<version>.zip` with `manifest.json` at the archive
-root and only runtime files. Do not upload the repository ZIP or a folder;
-upload this clean ZIP. Bump `version` in `manifest.json` for every upload.
+The Chrome build writes `dist/<name>-<version>.zip`. The Firefox build writes
+`dist/<name>-firefox-<version>.zip` and leaves an unpacked copy in
+`dist/firefox/` for `about:debugging`. Both put `manifest.json` at the archive
+root and include only runtime files. Do not upload the repository ZIP or a
+folder.
+
+The version must match in `package.json`, `manifest.json` and
+`manifest.firefox.json`. Both build scripts run
+`scripts/check-manifests.mjs`, which enforces this. Bump the version for every
+upload to either store.
 
 ## 4. Prepare the listing assets
 
@@ -94,6 +107,7 @@ Use real UI, no fake claims, no platform logos you do not have rights to use.
 > - No modifier key, no clipboard history, no copied-link storage.
 > - Optional `utm_*` / `mtm_*` campaign-tag removal.
 > - A paste-and-clean box for links copied elsewhere.
+> - Available for Chrome and Firefox.
 > - 100% local: no analytics, no network requests, no remote code.
 >
 > Privacy policy: <your hosted privacy URL>
@@ -114,9 +128,9 @@ these:
 - **`storage`:** Save the two user preferences (automatic cleaning on/off and
   campaign-tag removal on/off).
 - **`clipboardWrite`:** Write the cleaned link from the popup's Copy button.
-- **`scripting`:** Inject the page-world cleaner into the tab whose content
-  script requested it, because page clipboard APIs are not reachable from the
-  extension's isolated world.
+- **`scripting` (Chrome only):** Inject the page-world cleaner into the tab
+  whose content script requested it, because page clipboard APIs are not
+  reachable from the extension's isolated world.
 - **Host permissions:** Only the four supported platforms; used to intercept
   their copy/share actions.
 - **Remote code:** No.
@@ -127,7 +141,7 @@ public GitHub repository with GitHub Pages serving `PRIVACY.md` or a small
 `privacy.html`. The dashboard requires a reachable URL; a local file path is
 not enough.
 
-## 7. Submit and review
+## 7. Submit to the Chrome Web Store
 
 1. Create the item in the Developer Dashboard.
 2. Upload the clean ZIP.
@@ -138,7 +152,43 @@ not enough.
 6. Watch the registered email and the dashboard for reviewer questions.
 7. After approval, publish and reply to early reviews.
 
-## 8. Open source (optional but recommended)
+## 8. Submit to Firefox Add-ons (AMO)
+
+The Firefox build is already shaped for AMO:
+
+- `browser_specific_settings.gecko.id` is `cleanshare@konscanner.dev`. Keep it
+  stable; a new id makes a new add-on and loses the install base.
+- `strict_min_version` is `140.0`, the first Firefox that supports the AMO
+  data-collection declaration (MAIN-world content scripts need 128).
+- `data_collection_permissions.required` is `["none"]`; AMO requires this
+  declaration for new submissions since November 2025.
+- The background is an event page (`background.scripts`), not a service
+  worker. Firefox does not run MV3 service workers.
+- The page-world script is declared in the manifest, so Firefox does not need
+  the `scripting` permission.
+
+Steps:
+
+1. Sign in to the [Firefox Add-ons Developer Hub](https://addons.mozilla.org/developers/)
+   with a Mozilla account.
+2. Choose **Submit a New Add-on** and **On this site** (listed on AMO).
+3. Upload `dist/<name>-firefox-<version>.zip`.
+4. Let AMO validate it. The package is plain JavaScript and is not minified,
+   so source-code submission is normally not required. If a reviewer asks,
+   point them at the public repository and `scripts/build-firefox.sh`.
+5. Fill in the listing: name, summary, description, categories, screenshots
+   (1280×800), privacy-policy URL, support email and homepage.
+6. Add reviewer notes: no account is needed; load the temporary add-on, open a
+   YouTube video, press **Share → Copy link**, and paste.
+7. Submit for review. AMO review is usually faster than the Chrome Web Store,
+   but it can take several days for a new developer.
+8. After approval, the signed XPI is hosted by AMO and updates are automatic.
+
+Do not upload the same ZIP to both stores: Chrome must not see
+`browser_specific_settings`, and Firefox must not see `background.service_worker`.
+Build each package with its own script.
+
+## 9. Open source (optional but recommended)
 
 The code is already MIT-licensed. A public repository gives reviewers and
 users a place to inspect the rules and report false positives.
@@ -148,15 +198,17 @@ Before pushing:
 - Remove local-only paths, profiles and `dist/` from Git.
 - Keep `PRIVACY.md`, `LICENSE`, `README.md` and tests.
 - Add a `SECURITY.md` with a private reporting address.
-- Add a GitHub Actions workflow that runs `npm test` and the package build.
+- The GitHub Actions workflow runs `npm test` and both package builds on
+  every push and pull request.
 - Enable GitHub Pages for the privacy policy.
 - Add the repository/support URL to the store listing.
 
-## 9. After publishing
+## 10. After publishing
 
-- Bump the version for every change; the store rejects duplicate versions.
+- Bump the version for every change; both stores reject duplicate versions.
 - Keep `src/cleaner.js` updated when platforms rename parameters.
-- Re-run `npm test` and `node test/e2e.mjs` before each upload.
+- Re-run `npm test`, `npm run test:e2e` and `npm run test:e2e:firefox` before
+  each upload.
 - Keep the privacy policy and data declarations accurate.
 - Do not add network calls, telemetry or remote code without updating the
   listing and privacy disclosures.

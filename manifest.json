@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "CleanShare",
   "short_name": "CleanShare",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Strips account-bound share tags from links you copy or share on YouTube, X, Facebook and Instagram.",
   "minimum_chrome_version": "95",
   "permissions": [

@@ -1,0 +1,21 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Unit and manifest tests
+        run: npm test
+      - name: Build Chrome package
+        run: ./scripts/build-store.sh
+      - name: Build Firefox package
+        run: ./scripts/build-firefox.sh

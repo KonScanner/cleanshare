@@ -14,17 +14,14 @@ command -v unzip >/dev/null 2>&1 || {
   exit 1
 }
 
+node scripts/check-manifests.mjs
+
 version="$(node -p "require('./manifest.json').version")"
-package_version="$(node -p "require('./package.json').version")"
-if [ "$version" != "$package_version" ]; then
-  echo "manifest version $version does not match package.json $package_version" >&2
-  exit 1
-fi
 slug="$(node -p "require('./manifest.json').name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')")"
 out="dist/${slug}-${version}.zip"
 
-rm -rf dist
 mkdir -p dist
+rm -f "$out"
 
 # Runtime files only. Tests, docs and the README are deliberately excluded.
 zip -q -r "$out" \
